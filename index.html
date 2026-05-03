@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>パスワード生成器</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0f172a;
+      font-family: 'Segoe UI', sans-serif;
+      color: #e2e8f0;
+    }
+
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 32px;
+      text-align: center;
+      color: #f1f5f9;
+    }
+
+    /* パスワード表示欄 */
+    .password-box {
+      background: #0f172a;
+      border: 1px solid #475569;
+      border-radius: 10px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    #password-output {
+      flex: 1;
+      font-family: 'Courier New', monospace;
+      font-size: 1.1rem;
+      color: #38bdf8;
+      word-break: break-all;
+      letter-spacing: 0.05em;
+    }
+
+    .copy-btn {
+      background: none;
+      border: 1px solid #475569;
+      border-radius: 6px;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .copy-btn:hover { border-color: #38bdf8; color: #38bdf8; }
+    .copy-btn.copied { border-color: #22c55e; color: #22c55e; }
+
+    /* 強度バー */
+    .strength-bar-wrap {
+      height: 4px;
+      background: #334155;
+      border-radius: 4px;
+      margin-bottom: 28px;
+      overflow: hidden;
+    }
+    .strength-bar {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s, background 0.3s;
+      width: 0%;
+    }
+
+    /* スライダー */
+    .section-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.875rem;
+      color: #94a3b8;
+      margin-bottom: 10px;
+    }
+    .section-label span:last-child { color: #f1f5f9; font-weight: 600; }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #334155;
+      border-radius: 4px;
+      outline: none;
+      margin-bottom: 28px;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      background: #38bdf8;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover { background: #7dd3fc; }
+
+    /* チェックボックス */
+    .options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 28px; }
+
+    .option-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      user-select: none;
+    }
+    .option-item:hover { border-color: #475569; }
+    .option-item.active { border-color: #38bdf8; }
+
+    .option-item input[type="checkbox"] { display: none; }
+
+    .checkbox-icon {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #475569;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+    .option-item.active .checkbox-icon {
+      background: #38bdf8;
+      border-color: #38bdf8;
+    }
+    .checkbox-icon::after {
+      content: '';
+      width: 5px;
+      height: 9px;
+      border: 2px solid #0f172a;
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg) translate(-1px, -1px);
+      display: none;
+    }
+    .option-item.active .checkbox-icon::after { display: block; }
+
+    .option-text { font-size: 0.875rem; color: #cbd5e1; }
+    .option-sample { font-size: 0.75rem; color: #64748b; font-family: monospace; }
+
+    /* 生成ボタン */
+    .generate-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #0ea5e9, #6366f1);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .generate-btn:hover { opacity: 0.9; }
+    .generate-btn:active { transform: scale(0.98); }
+
+    /* トースト */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #22c55e;
+      color: white;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h1>パスワード生成器</h1>
+
+  <div class="password-box">
+    <span id="password-output">クリックして生成</span>
+    <button class="copy-btn" id="copy-btn" onclick="copyPassword()">コピー</button>
+  </div>
+
+  <div class="strength-bar-wrap">
+    <div class="strength-bar" id="strength-bar"></div>
+  </div>
+
+  <div class="section-label">
+    <span>文字数</span>
+    <span id="length-label">16</span>
+  </div>
+  <input type="range" id="length-slider" min="4" max="64" value="16" oninput="onLengthChange()">
+
+  <div class="options">
+    <label class="option-item active" id="opt-upper">
+      <input type="checkbox" checked onchange="generate()">
+      <span class="checkbox-icon"></span>
+      <span>
+        <div class="option-text">大文字</div>
+        <div class="option-sample">A–Z</div>
+      </span>
+    </label>
+    <label class="option-item active" id="opt-lower">
+      <input type="checkbox" checked onchange="generate()">
+      <span class="checkbox-icon"></span>
+      <span>
+        <div class="option-text">小文字</div>
+        <div class="option-sample">a–z</div>
+      </span>
+    </label>
+    <label class="option-item active" id="opt-number">
+      <input type="checkbox" checked onchange="generate()">
+      <span class="checkbox-icon"></span>
+      <span>
+        <div class="option-text">数字</div>
+        <div class="option-sample">0–9</div>
+      </span>
+    </label>
+    <label class="option-item active" id="opt-symbol">
+      <input type="checkbox" checked onchange="generate()">
+      <span class="checkbox-icon"></span>
+      <span>
+        <div class="option-text">記号</div>
+        <div class="option-sample">!@#$%</div>
+      </span>
+    </label>
+  </div>
+
+  <button class="generate-btn" onclick="generate()">生成する</button>
+</div>
+
+<div class="toast" id="toast">コピーしました!</div>
+
+<script>
+  const UPPER   = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const LOWER   = 'abcdefghijklmnopqrstuvwxyz';
+  const NUMBERS = '0123456789';
+  const SYMBOLS = '!@#$%^&*()-_=+[]{}|;:,.<>?';
+
+  function getOptions() {
+    const labels = [
+      { id: 'opt-upper',  chars: UPPER },
+      { id: 'opt-lower',  chars: LOWER },
+      { id: 'opt-number', chars: NUMBERS },
+      { id: 'opt-symbol', chars: SYMBOLS },
+    ];
+    return labels.map(o => {
+      const el = document.getElementById(o.id);
+      const checked = el.querySelector('input').checked;
+      if (checked) el.classList.add('active'); else el.classList.remove('active');
+      return checked ? o.chars : '';
+    }).join('');
+  }
+
+  function generate() {
+    const length = parseInt(document.getElementById('length-slider').value);
+    const pool = getOptions();
+
+    if (!pool) {
+      document.getElementById('password-output').textContent = '1つ以上選んでください';
+      updateStrength(0);
+      return;
+    }
+
+    // crypto.getRandomValues で安全な乱数
+    const array = new Uint32Array(length);
+    crypto.getRandomValues(array);
+    const password = Array.from(array).map(n => pool[n % pool.length]).join('');
+
+    document.getElementById('password-output').textContent = password;
+    updateStrength(calcEntropy(length, pool.length));
+  }
+
+  function calcEntropy(length, poolSize) {
+    return length * Math.log2(poolSize);
+  }
+
+  function updateStrength(entropy) {
+    const bar = document.getElementById('strength-bar');
+    let pct, color;
+    if      (entropy >= 100) { pct = 100; color = '#22c55e'; }
+    else if (entropy >= 72)  { pct = 75;  color = '#84cc16'; }
+    else if (entropy >= 50)  { pct = 50;  color = '#f59e0b'; }
+    else if (entropy >= 28)  { pct = 25;  color = '#ef4444'; }
+    else                     { pct = 10;  color = '#dc2626'; }
+    bar.style.width = pct + '%';
+    bar.style.background = color;
+  }
+
+  function onLengthChange() {
+    const val = document.getElementById('length-slider').value;
+    document.getElementById('length-label').textContent = val;
+    generate();
+  }
+
+  async function copyPassword() {
+    const text = document.getElementById('password-output').textContent;
+    if (!text || text === 'クリックして生成' || text === '1つ以上選んでください') return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const el = document.getElementById('password-output');
+      const range = document.createRange();
+      range.selectNode(el);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      document.execCommand('copy');
+      window.getSelection().removeAllRanges();
+    }
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '済み';
+    btn.classList.add('copied');
+    showToast();
+    setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 2000);
+  }
+
+  function showToast() {
+    const t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  }
+
+  generate();
+</script>
+</body>
+</html>
